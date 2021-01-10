@@ -1,0 +1,11 @@
+{
+  "apiURL": "wcgw-uat.symphony.com",
+  "privateKeyPath":"./rsa/",
+  "privateKeyName": "connect-privateKey.pem",
+  "publicKeyId": "psdev-chung-yeoh",
+  "podId": "5119",
+  "proxyURL": "",
+  "proxyUsername": "",
+  "proxyPassword": "",
+  "truststorePath": ""
+}
