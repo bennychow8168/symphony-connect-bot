@@ -39,28 +39,32 @@ class CommandHandler:
                         connect_roomName = user_info_raw[5].rstrip()
 
                     # Connect with new member
-                    logging.debug(f'Add New {externalNetwork} Contact')
-                    connect_result = self.connect_client.add_contact(externalNetwork, contact_firstName, contact_lastName, contact_email, contact_phone, contact_company, msg_initiator['userId'], msg_initiator['email'])
-                    msg_to_send = dict(message=f'''<messageML>{connect_result}</messageML>''')
-                    self.bot_client.get_message_client().send_msg(stream_id, msg_to_send)
+                    contact_id = self.connect_client.find_and_add_contact(externalNetwork, contact_firstName, contact_lastName, contact_email, contact_phone, contact_company, msg_initiator['userId'])
+                    if contact_id != '':
+                        logging.info(f'Contact established with {contact_id}')
+                        msg_to_send = dict(message=f'''<messageML>Successfully connected with {contact_firstName} {contact_lastName}</messageML>''')
+                        self.bot_client.get_message_client().send_msg(stream_id, msg_to_send)
+                    else:
+                        logging.error(f'Contact ID not found!')
+                        msg_to_send = dict(message=f'''<messageML>ERROR: Unable to add new contact for {contact_firstName} {contact_lastName}</messageML>''')
+                        self.bot_client.get_message_client().send_msg(stream_id, msg_to_send)
+                        return
+
 
                     # Search for connect room StreamID
                     if connect_roomName != '':
                         logging.debug(f'Check if Room Name "{connect_roomName}" exist')
-                        connect_room_streamid = self.connect_client.list_room(externalNetwork, connect_roomName, msg_initiator['email'])
+                        connect_room_streamid = self.connect_client.find_and_create_and_add_member_to_room(externalNetwork, connect_roomName, msg_initiator['userId'], contact_id)
 
-                        # Create room if stream id not found
-                        if connect_room_streamid == '':
-                            logging.debug(f'Creating new Room Name "{connect_roomName}"')
-                            connect_room_streamid = self.connect_client.create_room(externalNetwork, connect_roomName, msg_initiator['email'])
-                            msg_to_send = dict(message=f'''<messageML>Successfully created new room - {connect_roomName} - StreamID: {connect_room_streamid}</messageML>''')
+                        if connect_room_streamid != '':
+                            msg_to_send = dict(message=f'''<messageML>Successfully added contact to room - {connect_roomName} - StreamID: {connect_room_streamid}</messageML>''')
                             self.bot_client.get_message_client().send_msg(stream_id, msg_to_send)
-
-                        # Add connect member to room
-                        result = self.connect_client.add_room_member(externalNetwork, connect_room_streamid, contact_email, msg_initiator['email'])
-                        msg_to_send = dict(message=f'''<messageML>{result}</messageML>''')
-                        self.bot_client.get_message_client().send_msg(stream_id, msg_to_send)
-                        return
+                            return
+                        else:
+                            logging.error(f'Failed to add member to room')
+                            msg_to_send = dict(message=f'''<messageML>ERROR: Unable to add contact to room - {connect_roomName}</messageML>''')
+                            self.bot_client.get_message_client().send_msg(stream_id, msg_to_send)
+                            return
 
                 else:
                     msg_to_send = dict(message=f'''<messageML>ERROR: Insufficient Connect User Info Provided. Please refer to /help</messageML>''')

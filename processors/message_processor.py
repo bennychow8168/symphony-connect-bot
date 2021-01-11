@@ -15,7 +15,6 @@ class MessageProcessor:
 
     def element_process(self, action):
         logging.debug('inside of element process')
-        print(action)
         commandName = self.element_parser.get_form_values(action)['action']
         stream_id = self.element_parser.get_stream_id(action)
         msg_initiator = action['initiator']['user']
