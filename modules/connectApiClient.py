@@ -2,6 +2,7 @@ import requests
 import json
 import datetime
 import logging
+import urllib.parse
 from jose import jwt
 from json.decoder import JSONDecodeError
 
@@ -13,147 +14,79 @@ class ConnectApiClient():
         self.podId = config.data['podId']
 
 
-    def add_contact(self, externalNetwork, firstName, lastName, email, phoneNumber, companyName, symphonyId):
-        url = '/wechatgateway/invite/v2/send'
-        contactId = ''
+    def find_advisor(self, externalNetwork, advisorEmail):
+        url = f'/wechatgateway/api/v1/customer/advisors?externalNetwork={externalNetwork}&advisorEmailAddress={urllib.parse.quote_plus(advisorEmail)}'
+        status, result = self.execute_rest_call(externalNetwork, "GET", url)
+
+        return status, result
+
+
+    def find_contacts_by_advisor(self, externalNetwork, advisorEmailAddress):
+        url = f'/wechatgateway/api/v1/customer/advisors/advisorEmailAddress/{urllib.parse.quote_plus(advisorEmailAddress)}/externalNetwork/{externalNetwork}/contacts'
+        status, result = self.execute_rest_call(externalNetwork, "GET", url)
+
+        return status, result
+
+
+    def find_advisors_by_contact(self, externalNetwork, contactEmail):
+        url = f'/wechatgateway/api/v1/customer/contacts/contactEmailAddress/{urllib.parse.quote_plus(contactEmail)}/externalNetwork/{externalNetwork}/advisors'
+        status, result = self.execute_rest_call(externalNetwork, "GET", url)
+
+        return status, result
+
+
+    def add_contact(self, externalNetwork, firstName, lastName, email, phoneNumber, companyName, advisorEmailAddress):
+        url = '/wechatgateway/api/v1/customer/contacts'
+
         body = {
             "firstName": firstName,
             "lastName": lastName,
+            "companyName": companyName,
             "emailAddress": email,
             "phoneNumber": phoneNumber,
-            "companyName": companyName,
-            "podId": self.podId,
-            "anonymous": False,
-            "advisors":[symphonyId]}
+            "externalNetwork": externalNetwork,
+            "advisorEmailAddresses": [advisorEmailAddress],
+            "onboarderEmailAddress": advisorEmailAddress
+            }
 
         status, result = self.execute_rest_call(externalNetwork, "POST", url, json=body)
-        if status == 'OK':
-            contactId = self.list_contact(externalNetwork, email)
 
-        return contactId
+        return status, result
 
 
-    def list_contact(self, externalNetwork, contactEmail):
-        url = '/wechatgateway/invite/v1/list'
-        status, result = self.execute_rest_call(externalNetwork, "GET", url)
-
-        # Find if contact already exist
-        if status == 'OK' and len(result) > 0:
-            for record in result:
-                contact_info = record['customerInfo']
-
-                if contact_info['userId'] is not None and contact_info['emailAddress'] == contactEmail:
-                    logging.info(f'Existing Contact found for "{contactEmail}" - {contact_info["userId"]}')
-                    return contact_info['userId']
-
-        return ''
-    
-
-    def find_and_add_contact(self, externalNetwork, firstName, lastName, email, phoneNumber, companyName, symphonyId):
-        contactId = self.list_contact(externalNetwork, email)
-
-        # Contact not found, create new one
-        if contactId == '':
-            logging.info(f'Contact not found for "{email}", creating new contact')
-            contactId = self.add_contact(externalNetwork, firstName, lastName, email, phoneNumber, companyName, symphonyId)
-            if contactId != '':
-                logging.info(f'New Contact created for "{email}" - {contactId}')
-            else:
-                logging.error(f'ERROR: Unable to create new contact')
-
-        return contactId
-
-
-    def add_room_member(self, externalNetwork, streamId, connectId):
-        url = f'/wechatgateway/admin/v2/room/{streamId}/members'
+    def add_room_member(self, externalNetwork, streamId, contactEmail, advisorEmailAddress):
+        url = f'/wechatgateway/api/v1/customer/rooms/members'
 
         body = {
-            "internalMembers": [],
-            "connectMembers": [connectId]
-        }
+            "streamId": streamId,
+            "memberEmailAddress": contactEmail,
+            "advisorEmailAddress": advisorEmailAddress,
+            "externalNetwork": externalNetwork,
+            "contact": True
+            }
 
         status, result = self.execute_rest_call(externalNetwork, "POST", url, json=body)
-        if status == 'OK':
-            return 'OK'
-        else:
-            return ''
+        return status, result
 
 
-    def create_room(self, externalNetwork, roomName, symphonyId, connectId):
-        url = '/wechatgateway/admin/v2/room'
+    def remove_room_member(self, externalNetwork, streamId, contactEmail, advisorEmailAddress):
+        url = f'/wechatgateway/api/v1/customer/rooms/{streamId}/members?memberEmailAddress={urllib.parse.quote_plus(contactEmail)}&advisorEmailAddress={urllib.parse.quote_plus(advisorEmailAddress)}&externalNetwork={externalNetwork}&contact=false'
+
+        status, result = self.execute_rest_call(externalNetwork, "DELETE", url)
+        return status, result
+
+
+    def create_room(self, externalNetwork, roomName, advisorEmailAddress):
+        url = '/wechatgateway/api/v1/customer/rooms'
 
         body = {
             "roomName": roomName,
-            "internalMembers": [symphonyId],
-            "connectMembers": [connectId]
-        }
+            "advisorEmailAddress": advisorEmailAddress,
+            "externalNetwork": externalNetwork
+            }
 
         status, result = self.execute_rest_call(externalNetwork, "POST", url, json=body)
-        if status == 'OK':
-            return result['streamId']
-        else:
-            return ''
-
-
-    def activate_room(self, externalNetwork, streamId):
-        url = f'/wechatgateway/admin/v2/room/{streamId}/activate'
-        status, result = self.execute_rest_call(externalNetwork, "POST", url)
-        if status == 'OK':
-            return streamId
-        else:
-            return ''
-
-
-    def find_and_add_member_to_room(self, externalNetwork, streamId, connectId):
-        url = f'/wechatgateway/admin/v2/room/{streamId}/members'
-        status, result = self.execute_rest_call(externalNetwork, "GET", url)
-
-        # Find if member already exist
-        if status == 'OK' and len(result) > 0:
-            for record in result:
-                if record['symphonyId'] == str(connectId) and record['status'] == 'ADDED':
-                    logging.debug(f'Member found in {streamId}')
-                    return streamId
-
-            # Add new member to room
-            logging.debug("Adding Connect Member to Room")
-            status = self.add_room_member(externalNetwork, streamId, connectId)
-            if status == 'OK':
-                return streamId
-            else:
-                return ''
-
-
-    def find_and_create_and_add_member_to_room(self, externalNetwork, roomName, symphonyId, connectId):
-        url = '/wechatgateway/admin/v2/room'
-        stream_id = ''
-
-        # Get list of current rooms
-        status, result = self.execute_rest_call(externalNetwork, "GET", url)
-
-        # Find if room already exist
-        if status == 'OK' and len(result) > 0:
-            for record in result:
-                if record['roomName'] == roomName:
-                    logging.debug(f'Existing Room found for "{roomName}" - {record["streamId"]}')
-                    stream_id = record["streamId"]
-
-                    # Make sure room is active, if not activate it
-                    if record['status'] != 'ACTIVE':
-                        logging.debug(f'Room is not active, Re-Activating Room')
-                        stream_id = self.activate_room(externalNetwork, record['streamId'])
-
-                    # Check and add member to room
-                    if stream_id != '':
-                        stream_id = self.find_and_add_member_to_room(externalNetwork, stream_id, connectId)
-
-                    return stream_id
-
-            # Room not found, create new one
-            logging.debug(f'Room not found for "{roomName}", creating new room')
-            stream_id = self.create_room(externalNetwork, roomName, symphonyId, connectId)
-
-        return stream_id
+        return status, result
 
 
     def parse_result(self, apiResult, responseCode):
@@ -164,6 +97,10 @@ class ConnectApiClient():
                     errorMsg = errorMsg + f' - {apiResult["status"]}'
                 if 'error' in apiResult:
                     errorMsg = errorMsg + f' - {apiResult["error"]}'
+                if 'type' in apiResult:
+                    errorMsg = errorMsg + f' - {apiResult["type"]}'
+                if 'title' in apiResult:
+                    errorMsg = errorMsg + f' - {apiResult["title"]}'
                 if 'message' in apiResult:
                     errorMsg = errorMsg + f' - {apiResult["message"]}'
                 if 'errorMessage' in apiResult:
@@ -179,10 +116,10 @@ class ConnectApiClient():
 
     def get_session(self, externalNetwork):
         session = requests.Session()
+
         session.headers.update({
             'Content-Type': "application/json",
-            #'Authorization': "Bearer " + self.create_jwt(externalNetwork)}
-            'Authorization': "Bearer " + tmp_jwt}
+            'Authorization': "Bearer " + self.create_jwt(externalNetwork)}
         )
 
         session.proxies.update(self.config.data['proxyRequestObject'])
@@ -209,18 +146,11 @@ class ConnectApiClient():
 
         if response.status_code == 204:
             results = []
-        #elif response.status_code in (200, 409, 201, 404, 400):
         else:
             try:
                 results = json.loads(response.text)
             except JSONDecodeError:
                 results = response.text
-        # else:
-        #     # Try to get the json to be used to handle the error message
-        #     logging.error('Failed while invoking ' + url)
-        #     logging.error('Status Code: ' + str(response.status_code))
-        #     logging.error('Response: ' + response.text)
-        #     raise Exception(response.text)
 
         final_output = self.parse_result(results, response.status_code)
         logging.debug(results)
