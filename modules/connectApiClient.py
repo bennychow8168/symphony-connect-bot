@@ -12,7 +12,7 @@ class ConnectApiClient():
     def __init__(self, config):
         self.config = config
         self.podId = config.data['podId']
-
+        self.jwt = None
 
     def find_advisor(self, externalNetwork, advisorEmail):
         url = f'/wechatgateway/api/v1/customer/advisors?externalNetwork={externalNetwork}&advisorEmailAddress={urllib.parse.quote_plus(advisorEmail)}'
@@ -25,12 +25,44 @@ class ConnectApiClient():
         url = f'/wechatgateway/api/v1/customer/advisors/advisorEmailAddress/{urllib.parse.quote_plus(advisorEmailAddress)}/externalNetwork/{externalNetwork}/contacts'
         status, result = self.execute_rest_call(externalNetwork, "GET", url)
 
+        if status == 'OK' and 'pagination' in result and result['pagination']['next'] is not None:
+            after_cursor = result['pagination']['next']
+            while True:
+                next_url = url + after_cursor
+                print(f'Retrieving next batch - {next_url}')
+                tmp_status, tmp_result = self.execute_rest_call(externalNetwork, "GET", next_url)
+                if tmp_status == 'OK':
+                    result['contacts'] = result['contacts'] + tmp_result['contacts']
+                else:
+                    break
+
+                if tmp_result['pagination']['next'] is None:
+                    break
+                else:
+                    after_cursor = tmp_result['pagination']['next']
+
         return status, result
 
 
     def find_advisors_by_contact(self, externalNetwork, contactEmail):
         url = f'/wechatgateway/api/v1/customer/contacts/contactEmailAddress/{urllib.parse.quote_plus(contactEmail)}/externalNetwork/{externalNetwork}/advisors'
         status, result = self.execute_rest_call(externalNetwork, "GET", url)
+
+        if status == 'OK' and 'pagination' in result and result['pagination']['next'] is not None:
+            after_cursor = result['pagination']['next']
+            while True:
+                next_url = url + after_cursor
+                print(f'Retrieving next batch - {next_url}')
+                tmp_status, tmp_result = self.execute_rest_call(externalNetwork, "GET", next_url)
+                if tmp_status == 'OK':
+                    result['advisors'] = result['advisors'] + tmp_result['advisors']
+                else:
+                    break
+
+                if tmp_result['pagination']['next'] is None:
+                    break
+                else:
+                    after_cursor = tmp_result['pagination']['next']
 
         return status, result
 
@@ -70,7 +102,7 @@ class ConnectApiClient():
 
 
     def remove_room_member(self, externalNetwork, streamId, contactEmail, advisorEmailAddress):
-        url = f'/wechatgateway/api/v1/customer/rooms/{streamId}/members?memberEmailAddress={urllib.parse.quote_plus(contactEmail)}&advisorEmailAddress={urllib.parse.quote_plus(advisorEmailAddress)}&externalNetwork={externalNetwork}&contact=false'
+        url = f'/wechatgateway/api/v1/customer/rooms/{streamId}/members?memberEmailAddress={urllib.parse.quote_plus(contactEmail)}&advisorEmailAddress={urllib.parse.quote_plus(advisorEmailAddress)}&externalNetwork={externalNetwork}&contact=true'
 
         status, result = self.execute_rest_call(externalNetwork, "DELETE", url)
         return status, result
@@ -86,6 +118,31 @@ class ConnectApiClient():
             }
 
         status, result = self.execute_rest_call(externalNetwork, "POST", url, json=body)
+        return status, result
+
+
+    def list_room_by_advisor(self, externalNetwork, advisorEmailAddress):
+        url = f'/wechatgateway/api/v1/customer/rooms?advisorEmailAddress={urllib.parse.quote_plus(advisorEmailAddress)}&externalNetwork={externalNetwork}'
+
+        status, result = self.execute_rest_call(externalNetwork, "GET", url)
+
+        if status == 'OK' and 'pagination' in result and result['pagination']['next'] is not None:
+            after_cursor = result['pagination']['next']
+            while True:
+                next_url = url + after_cursor
+                print(f'Retrieving next batch - {next_url}')
+                tmp_status, tmp_result = self.execute_rest_call(externalNetwork, "GET", next_url)
+                if tmp_status == 'OK':
+                    result['rooms'] = result['rooms'] + tmp_result['rooms']
+                else:
+                    break
+
+                if tmp_result['pagination']['next'] is None:
+                    break
+                else:
+                    after_cursor = tmp_result['pagination']['next']
+
+
         return status, result
 
 
@@ -117,9 +174,14 @@ class ConnectApiClient():
     def get_session(self, externalNetwork):
         session = requests.Session()
 
+        if self.jwt is not None:
+            jwt = self.jwt
+        else:
+            jwt = self.create_jwt(externalNetwork)
+
         session.headers.update({
             'Content-Type': "application/json",
-            'Authorization': "Bearer " + self.create_jwt(externalNetwork)}
+            'Authorization': "Bearer " + jwt}
         )
 
         session.proxies.update(self.config.data['proxyRequestObject'])
@@ -146,6 +208,11 @@ class ConnectApiClient():
 
         if response.status_code == 204:
             results = []
+        # JWT Expired - Generate new one
+        elif response.status_code == 401:
+            logging.info("JWT Expired - Reauthenticating...")
+            self.jwt = None
+            return self.execute_rest_call(externalNetwork, method, path, **kwargs)
         else:
             try:
                 results = json.loads(response.text)
@@ -184,4 +251,5 @@ class ConnectApiClient():
 
             encoded = jwt.encode(payload, private_key, algorithm='RS512')
             f.close()
+            self.jwt = encoded
             return encoded

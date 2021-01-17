@@ -39,32 +39,13 @@ class CommandHandler:
                         connect_roomName = user_info_raw[5].rstrip()
 
                     # Connect with new member
-                    contact_id = self.connect_client.find_and_add_contact(externalNetwork, contact_firstName, contact_lastName, contact_email, contact_phone, contact_company, msg_initiator['userId'])
-                    if contact_id != '':
-                        logging.info(f'Contact established with {contact_id}')
-                        msg_to_send = dict(message=f'''<messageML>Successfully connected with {contact_firstName} {contact_lastName}</messageML>''')
-                        self.bot_client.get_message_client().send_msg(stream_id, msg_to_send)
-                    else:
-                        logging.error(f'Contact ID not found!')
-                        msg_to_send = dict(message=f'''<messageML>ERROR: Unable to add new contact for {contact_firstName} {contact_lastName}</messageML>''')
-                        self.bot_client.get_message_client().send_msg(stream_id, msg_to_send)
-                        return
+                    msg_to_send = self.find_and_add_contact(externalNetwork, contact_firstName, contact_lastName, contact_email, contact_phone, contact_company, msg_initiator)
+                    self.bot_client.get_message_client().send_msg(stream_id, msg_to_send)
 
-
-                    # Search for connect room StreamID
+                    # Add contact to Room
                     if connect_roomName != '':
-                        logging.debug(f'Check if Room Name "{connect_roomName}" exist')
-                        connect_room_streamid = self.connect_client.find_and_create_and_add_member_to_room(externalNetwork, connect_roomName, msg_initiator['userId'], contact_id)
-
-                        if connect_room_streamid != '':
-                            msg_to_send = dict(message=f'''<messageML>Successfully added contact to room - {connect_roomName} - StreamID: {connect_room_streamid}</messageML>''')
-                            self.bot_client.get_message_client().send_msg(stream_id, msg_to_send)
-                            return
-                        else:
-                            logging.error(f'Failed to add member to room')
-                            msg_to_send = dict(message=f'''<messageML>ERROR: Unable to add contact to room - {connect_roomName}</messageML>''')
-                            self.bot_client.get_message_client().send_msg(stream_id, msg_to_send)
-                            return
+                        msg_to_send = self.add_contact_to_room(externalNetwork, connect_roomName, contact_email, msg_initiator)
+                        self.bot_client.get_message_client().send_msg(stream_id, msg_to_send)
 
                 else:
                     msg_to_send = dict(message=f'''<messageML>ERROR: Insufficient Connect User Info Provided. Please refer to /help</messageML>''')
@@ -90,6 +71,67 @@ class CommandHandler:
         elif commandName == '/help':
             self.bot_client.get_message_client().send_msg(stream_id, self.print_help())
             return
+
+
+    def add_contact_to_room(self, externalNetwork, roomName, contact_email, msg_initiator):
+        stream_id = None
+        # Get list of rooms by advisor
+        status, result = self.connect_client.list_room_by_advisor(externalNetwork, msg_initiator['email'])
+        if status == 'OK':
+            if 'rooms' in result and len(result['rooms']) > 0:
+                for r in result['rooms']:
+                    if r['roomName'] == roomName:
+                        print('Existing room found')
+                        stream_id = r['streamId']
+                        break
+        else:
+            msg_to_send = dict(message=f'''<messageML>Error getting list of rooms - {result}</messageML>''')
+            return msg_to_send
+
+        # Create room is necessary
+        if stream_id is None:
+            status, result = self.connect_client.create_room(externalNetwork, roomName, msg_initiator['email'])
+            if status == 'OK':
+                stream_id = result['streamId']
+            else:
+                msg_to_send = dict(message=f'''<messageML>Error creating new room - {result}</messageML>''')
+                return msg_to_send
+
+        # Add member to room
+        if stream_id is not None:
+            status, result = self.connect_client.add_room_member(externalNetwork, stream_id, contact_email, msg_initiator['email'])
+            if status == 'OK':
+                msg_to_send = dict(message=f'''<messageML>Successfully added {contact_email} to Room - {roomName}!</messageML>''')
+                return msg_to_send
+            else:
+                msg_to_send = dict(message=f'''<messageML>Error adding contact to room - {result}</messageML>''')
+                return msg_to_send
+
+
+    def find_and_add_contact(self, externalNetwork, contact_firstName, contact_lastName, contact_email, contact_phone, contact_company, msg_initiator):
+        # Get list of contacts by msg initiator
+        status, result = self.connect_client.find_contacts_by_advisor(externalNetwork, msg_initiator['email'])
+        if status == 'OK':
+            if 'contacts' in result and len(result['contacts']) > 0:
+                for c in result['contacts']:
+                    if c['status'] == 'CONFIRMED' and c['emailAddress'] == contact_email:
+                        msg_to_send = dict(message=f'''<messageML>{contact_email} is already an existing contact!</messageML>''')
+                        return msg_to_send
+                    elif c['status'] != 'CONFIRMED' and c['emailAddress'] == contact_email:
+                        msg_to_send = dict(message=f'''<messageML>{contact_email} is already an existing contact, but status is {c["status"]}</messageML>''')
+                        return msg_to_send
+        else:
+            msg_to_send = dict(message=f'''<messageML>Error getting list of contacts - {result}</messageML>''')
+            return msg_to_send
+
+        # Contact not found, try to add new contact
+        status, result = self.connect_client.add_contact(externalNetwork, contact_firstName, contact_lastName, contact_email, contact_phone, contact_company, msg_initiator['email'])
+        if status == 'OK':
+            msg_to_send = dict(message=f'''<messageML>Successfully onboarded {contact_firstName} {contact_lastName} as a new contact!</messageML>''')
+            return msg_to_send
+        else:
+            msg_to_send = dict(message=f'''<messageML>Error adding new contact - {result}</messageML>''')
+            return msg_to_send
 
 
     def print_connect_form(self):
