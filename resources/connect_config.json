@@ -1,8 +1,10 @@
 {
-  "apiURL": "wcgw-uat.symphony.com/wechatgateway",
+  "wechat_apiURL": "wcgw-uat.symphony.com/wechatgateway",
+  "whatsapp_apiURL": "connect.uat.symphony.com/admin",
   "privateKeyPath":"./rsa/",
   "privateKeyName": "connect-privateKey.pem",
-  "publicKeyId": "psdev-chung-yeoh",
+  "wechat_publicKeyId": "psdev-chung-yeoh",
+  "whatsapp_publicKeyId": "entitlements-app",
   "podId": "5119",
   "proxyURL": "",
   "proxyUsername": "",

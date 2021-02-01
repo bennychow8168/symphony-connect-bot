@@ -47,10 +47,8 @@ class ConnectConfig:
             data = json.load(read_file)
             self.data = data
 
-            if 'sessionAuthPort' in data:
-                self.data['apiURL'] = 'https://'+ data['apiURL'] + ':' + str(data['sessionAuthPort'])
-            else:
-                self.data['apiURL'] = 'https://'+ data['apiURL']
+            self.data['wechat_apiURL'] = 'https://'+ data['wechat_apiURL']
+            self.data['whatsapp_apiURL'] = 'https://' + data['whatsapp_apiURL']
 
             if 'privateKeyName' in data:
                 self.data['botRSAPath'] = self._fix_relative_path(data, 'privateKeyPath', 'privateKeyName')

@@ -203,7 +203,12 @@ class ConnectApiClient():
 
     def execute_rest_call(self, externalNetwork, method, path, **kwargs):
         results = None
-        url = self.config.data['apiURL'] + path
+        if externalNetwork == "WECHAT":
+            apiURL = self.config.data['wechat_apiURL']
+        elif externalNetwork == "WHATSAPP":
+            apiURL = self.config.data['whatsapp_apiURL']
+
+        url = apiURL + path
         session = self.get_session(externalNetwork)
         try:
             logging.debug(f'Invoke API URL: {url}')
@@ -248,13 +253,13 @@ class ConnectApiClient():
 
             if externalNetwork == 'WHATSAPP':
                 payload = {
-                    'sub': 'ces:customer:' + self.config.data['publicKeyId'],
+                    'sub': 'ces:customer:' + self.config.data['whatsapp_publicKeyId'],
                     'exp': expiration_date,
                     'iat': current_date
                 }
             elif externalNetwork == 'WECHAT':
                 payload = {
-                    'sub': 'ces:customer:' + self.config.data['publicKeyId'] + ':' + self.config.data['podId'],
+                    'sub': 'ces:customer:' + self.config.data['wechat_publicKeyId'] + ':' + self.config.data['podId'],
                     'exp': expiration_date,
                     'iat': current_date
                 }
