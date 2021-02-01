@@ -65,12 +65,110 @@ class CommandHandler:
             return
 
         ###########################
+        # List Contacts for current advisor
+        # @bot /listcontacts
+        ############################
+        elif commandName == '/listcontacts':
+            if len(msg_text) >= 3:
+                externalNetwork = msg_text[2].upper().rstrip()
+
+                if externalNetwork not in ("WECHAT", "WHATSAPP"):
+                    msg_to_send = dict(message=f'''<messageML>ERROR: Invalid Connect Network provided. Expect "WECHAT" or "WHATSAPP" only</messageML>''')
+                    self.bot_client.get_message_client().send_msg(stream_id, msg_to_send)
+                    return
+
+                msg_to_send = self.list_all_contacts(externalNetwork, msg_initiator)
+                self.bot_client.get_message_client().send_msg(stream_id, msg_to_send)
+                return
+            else:
+                msg_to_send = dict(message=f'''<messageML>ERROR: Insufficient Details Provided. Please refer to /help</messageML>''')
+                self.bot_client.get_message_client().send_msg(stream_id, msg_to_send)
+                return
+
+
+        ###########################
+        # Delete a contact for current advisor
+        # @bot /deletecontact
+        ############################
+        elif commandName == '/deletecontact':
+            if len(msg_text) >= 4:
+                externalNetwork = msg_text[2].upper().rstrip()
+
+                if externalNetwork not in ("WECHAT", "WHATSAPP"):
+                    msg_to_send = dict(message=f'''<messageML>ERROR: Invalid Connect Network provided. Expect "WECHAT" or "WHATSAPP" only</messageML>''')
+                    self.bot_client.get_message_client().send_msg(stream_id, msg_to_send)
+                    return
+
+                contact_email = msg_text[3].rstrip()
+                msg_to_send = self.delete_contact(externalNetwork, contact_email, msg_initiator)
+                self.bot_client.get_message_client().send_msg(stream_id, msg_to_send)
+                return
+            else:
+                msg_to_send = dict(message=f'''<messageML>ERROR: Insufficient Details Provided. Please refer to /help</messageML>''')
+                self.bot_client.get_message_client().send_msg(stream_id, msg_to_send)
+                return
+
+
+        ###########################
         # Get Help
         # @bot /help
         ############################
         elif commandName == '/help':
             self.bot_client.get_message_client().send_msg(stream_id, self.print_help())
             return
+
+
+    ###########################
+    # Utility Functions
+    ############################
+    def delete_contact(self, externalNetwork, contact_email, msg_initiator):
+        # Delete contact by advisor
+        status, result = self.connect_client.delete_contact(externalNetwork, contact_email, msg_initiator['email'])
+        if status == 'OK':
+            msg_to_send = dict(message=f'''<messageML>{contact_email} removed!</messageML>''')
+            return msg_to_send
+        else:
+            msg_to_send = dict(message=f'''<messageML>Error getting list of contacts - {result}</messageML>''')
+            return msg_to_send
+
+
+    def list_all_contacts(self, externalNetwork, msg_initiator):
+        # Get list of contacts by advisor
+        status, result = self.connect_client.find_contacts_by_advisor(externalNetwork, msg_initiator['email'])
+        if status == 'OK':
+            if 'contacts' in result and len(result['contacts']) > 0:
+                contact_table = f'''<form id="list-connect-contact">
+                    <table style='border-collapse:collapse;border-spacing:0px;white-space:nowrap'>
+                              <tr class="tempo-text-color--black">
+                                <td style='border-bottom-style:none;background-color:#b7b7b7ff'><b>Name</b></td>
+                                <td style='border-bottom-style:none;background-color:#b7b7b7ff'><b>Email</b></td>
+                                <td style='border-bottom-style:none;background-color:#b7b7b7ff'><b>Phone</b></td>
+                                <td style='border-bottom-style:none;background-color:#b7b7b7ff'><b>Company</b></td>
+                                <td style='border-bottom-style:none;background-color:#b7b7b7ff'><b>Status</b></td>
+                                <td style='border-bottom-style:none;background-color:#b7b7b7ff'>Action</td>
+                              </tr>'''
+                for c in result['contacts']:
+                    contact_table += f'''
+                              <tr>
+                                <td>{c['firstName']} {c['lastName']}</td>
+                                <td>{c['emailAddress']}</td>
+                                <td>{c['phoneNumber']}</td>
+                                <td>{c['companyName']}</td>
+                                <td>{c['status']}</td>
+                                <td><button name="delcontact_{externalNetwork}_{c['emailAddress']}" type="action">Delete</button></td>
+                              </tr>'''
+
+                contact_table += f'''</table></form>'''
+
+                # Wrap header + footer
+                output = f'''<messageML><card accent='tempo-bg-color--blue' iconSrc=''><header><h2>List of Contacts</h2></header>
+                        <body>{contact_table}</body></card></messageML>'''
+                output = dict(message=output)
+                return output
+
+        else:
+            msg_to_send = dict(message=f'''<messageML>Error getting list of contacts - {result}</messageML>''')
+            return msg_to_send
 
 
     def add_contact_to_room(self, externalNetwork, roomName, contact_email, msg_initiator):
@@ -81,7 +179,7 @@ class CommandHandler:
             if 'rooms' in result and len(result['rooms']) > 0:
                 for r in result['rooms']:
                     if r['roomName'] == roomName:
-                        print('Existing room found')
+                        logging.info('Existing room found')
                         stream_id = r['streamId']
                         break
         else:
@@ -187,6 +285,16 @@ class CommandHandler:
                                 <td><b>/connectform</b></td>
                                 <td>@ConnectBot /connectform</td>
                                 <td>Request for an Element form to add new contact</td>
+                              </tr>
+                              <tr>
+                                <td><b>/listcontacts</b></td>
+                                <td><b>List all contacts</b><br/>@ConnectBot /listcontacts [WECHAT|WHATSAPP]</td>
+                                <td>List all contacts for current user by Connect network</td>
+                              </tr>
+                              <tr>
+                                <td><b>/deletecontact</b></td>
+                                <td><b>Delete a contact</b><br/>@ConnectBot /deletecontact [WECHAT|WHATSAPP] [ContactEmailAddress]</td>
+                                <td>Delete a contact for current user by Connect network</td>
                               </tr>
                               <tr>
                                 <td><b>/help</b></td>

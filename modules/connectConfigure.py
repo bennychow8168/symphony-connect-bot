@@ -1,5 +1,6 @@
 import json
 import os
+import logging
 
 class ConnectConfig:
     # initialize object by passing in path to config file
@@ -37,7 +38,7 @@ class ConnectConfig:
 
         if warn_if_absent and (not os.path.exists(result)):
             parts = [p for p in [path_key, filename_key] if p is not None]
-            print("{} specified in config, but resolved path {} does not exist".format(", ".join(parts), result))
+            logging.warning("{} specified in config, but resolved path {} does not exist".format(", ".join(parts), result))
         return result
 
 

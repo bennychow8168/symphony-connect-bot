@@ -1,5 +1,5 @@
 {
-  "apiURL": "wcgw-uat.symphony.com",
+  "apiURL": "wcgw-uat.symphony.com/wechatgateway",
   "privateKeyPath":"./rsa/",
   "privateKeyName": "connect-privateKey.pem",
   "publicKeyId": "psdev-chung-yeoh",

@@ -16,6 +16,7 @@ class MessageProcessor:
     def element_process(self, action):
         logging.debug('inside of element process')
         commandName = self.element_parser.get_form_values(action)['action']
+        logging.debug(commandName)
         stream_id = self.element_parser.get_stream_id(action)
         msg_initiator = action['initiator']['user']
 
@@ -41,6 +42,29 @@ class MessageProcessor:
             msg_text.append(user_info_raw)
 
             self.command_handle.command_router(stream_id, commandName, msg_text, msg_initiator)
+            return
+
+        ###########################
+        # Delete Contact
+        ############################
+        if re.match('delcontact_', commandName):
+            input_param = re.search(r'(delcontact_)(.+)', commandName).group(2).split("_")
+            if len(input_param) != 2:
+                msg_to_send = dict(
+                    message=f'''<messageML>ERROR: Unable to locate contact to delete</messageML>''')
+                self.bot_client.get_message_client().send_msg(stream_id, msg_to_send)
+                return
+
+            # Build msg_text
+            commandName = '/deletecontact'
+            bot_name = '@' + self.bot_client.get_bot_user_info()['displayName']
+            msg_text = [bot_name]
+            msg_text.append(commandName)
+            msg_text.append(input_param[0])
+            msg_text.append(input_param[1])
+
+            self.command_handle.command_router(stream_id, commandName, msg_text, msg_initiator)
+            return
 
 
     def process(self, msg):
