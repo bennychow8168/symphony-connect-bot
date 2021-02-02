@@ -22,7 +22,10 @@ class ConnectApiClient():
 
 
     def find_contact(self, externalNetwork, email):
-        url = f'/api/v1/customer/contacts?emailAddress={email}&externalNetwork={externalNetwork}'
+        if externalNetwork == 'WECHAT':
+            url = f'/api/v1/customer/contacts?contactEmailAddress={urllib.parse.quote_plus(email)}&externalNetwork={externalNetwork}'
+        elif externalNetwork == 'WHATSAPP':
+            url = f'/api/v1/customer/contacts?emailAddress={urllib.parse.quote_plus(email)}&externalNetwork={externalNetwork}'
         status, result = self.execute_rest_call(externalNetwork, "GET", url)
 
         return status, result

@@ -49,11 +49,16 @@ class MessageProcessor:
         ############################
         if re.match('delcontact_', commandName):
             input_param = re.search(r'(delcontact_)(.+)', commandName).group(2).split("_")
-            if len(input_param) != 2:
+            print(input_param)
+            if len(input_param) < 2:
                 msg_to_send = dict(
                     message=f'''<messageML>ERROR: Unable to locate contact to delete</messageML>''')
                 self.bot_client.get_message_client().send_msg(stream_id, msg_to_send)
                 return
+            elif len(input_param) > 2: # Join remainder
+                user_email = ''.join(input_param[1:])
+            else:
+                user_email = input_param[1]
 
             # Build msg_text
             commandName = '/deletecontact'
@@ -61,7 +66,7 @@ class MessageProcessor:
             msg_text = [bot_name]
             msg_text.append(commandName)
             msg_text.append(input_param[0])
-            msg_text.append(input_param[1])
+            msg_text.append(user_email)
 
             self.command_handle.command_router(stream_id, commandName, msg_text, msg_initiator)
             return

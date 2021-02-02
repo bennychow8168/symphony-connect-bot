@@ -148,13 +148,14 @@ class CommandHandler:
                                 <td style='border-bottom-style:none;background-color:#b7b7b7ff'>Action</td>
                               </tr>'''
                 for c in result['contacts']:
+                    status = c['status'] if 'status' in c else ''
                     contact_table += f'''
                               <tr>
                                 <td>{c['firstName']} {c['lastName']}</td>
                                 <td>{c['emailAddress']}</td>
                                 <td>{c['phoneNumber']}</td>
                                 <td>{c['companyName']}</td>
-                                <td>{c['status']}</td>
+                                <td>{status}</td>
                                 <td><button name="delcontact_{externalNetwork}_{c['emailAddress']}" type="action">Delete</button></td>
                               </tr>'''
 
@@ -212,10 +213,11 @@ class CommandHandler:
         if status == 'OK':
             if 'contacts' in result and len(result['contacts']) > 0:
                 for c in result['contacts']:
-                    if c['status'] == 'CONFIRMED' and c['emailAddress'] == contact_email:
+                    status = c['status'] if 'status' in c else 'CONFIRMED'
+                    if status == 'CONFIRMED' and c['emailAddress'] == contact_email:
                         msg_to_send = dict(message=f'''<messageML>{contact_email} is already an existing contact!</messageML>''')
                         return msg_to_send
-                    elif c['status'] != 'CONFIRMED' and c['emailAddress'] == contact_email:
+                    elif status != 'CONFIRMED' and c['emailAddress'] == contact_email:
                         msg_to_send = dict(message=f'''<messageML>{contact_email} is already an existing contact, but status is {c["status"]}</messageML>''')
                         return msg_to_send
         else:
