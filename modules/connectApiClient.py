@@ -21,8 +21,19 @@ class ConnectApiClient():
         return status, result
 
 
+    def find_contact(self, externalNetwork, email):
+        url = f'/api/v1/customer/contacts?emailAddress={email}&externalNetwork={externalNetwork}'
+        status, result = self.execute_rest_call(externalNetwork, "GET", url)
+
+        return status, result
+
+
     def find_contacts_by_advisor(self, externalNetwork, advisorEmailAddress):
-        url = f'/api/v1/customer/advisors/advisorEmailAddress/{urllib.parse.quote_plus(advisorEmailAddress)}/externalNetwork/{externalNetwork}/contacts'
+        if externalNetwork == 'WECHAT':
+            url = f'/api/v1/customer/advisors/advisorEmailAddress/{urllib.parse.quote_plus(advisorEmailAddress)}/externalNetwork/{externalNetwork}/contacts'
+        elif externalNetwork == 'WHATSAPP':
+            url = f'/api/v1/customer/advisors/emailAddress/{urllib.parse.quote_plus(advisorEmailAddress)}/externalNetwork/{externalNetwork}/contacts'
+
         status, result = self.execute_rest_call(externalNetwork, "GET", url)
 
         if status == 'OK' and 'pagination' in result and result['pagination']['next'] is not None:
@@ -45,7 +56,11 @@ class ConnectApiClient():
 
 
     def find_advisors_by_contact(self, externalNetwork, contactEmail):
-        url = f'/api/v1/customer/contacts/contactEmailAddress/{urllib.parse.quote_plus(contactEmail)}/externalNetwork/{externalNetwork}/advisors'
+        if externalNetwork == 'WECHAT':
+            url = f'/api/v1/customer/contacts/contactEmailAddress/{urllib.parse.quote_plus(contactEmail)}/externalNetwork/{externalNetwork}/advisors'
+        elif externalNetwork == 'WHATSAPP':
+            url = f'/api/v1/customer/contacts/emailAddress/{urllib.parse.quote_plus(contactEmail)}/externalNetwork/{externalNetwork}/advisors'
+
         status, result = self.execute_rest_call(externalNetwork, "GET", url)
 
         if status == 'OK' and 'pagination' in result and result['pagination']['next'] is not None:
