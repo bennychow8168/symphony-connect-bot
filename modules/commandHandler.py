@@ -269,7 +269,7 @@ class CommandHandler:
         return output
 
     def print_help(self):
-        output = f'''<messageML><h2>Welcome to Symphony Connect Bot!</h2><br/>
+        output = f'''<messageML><h2>Welcome to Symphony's Demo Connect Bot!</h2><br/>
                         <table style='border-collapse:collapse;border-spacing:0px;white-space:nowrap'>
                               <tr class="tempo-text-color--black">
                                 <td style='border-bottom-style:none;background-color:#b7b7b7ff;width:100px'><b>Command</b></td>
