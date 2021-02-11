@@ -15,7 +15,7 @@ class ConnectApiClient():
         self.jwt = None
 
     def find_advisor(self, externalNetwork, advisorEmail):
-        url = f'/api/v1/customer/advisors?externalNetwork={externalNetwork}&advisorEmailAddress={urllib.parse.quote_plus(advisorEmail)}'
+        url = f'/api/v2/customer/advisor/entitlements?advisorEmailAddress={urllib.parse.quote_plus(advisorEmail)}&externalNetwork={externalNetwork}'
         status, result = self.execute_rest_call(externalNetwork, "GET", url)
 
         return status, result
@@ -32,10 +32,7 @@ class ConnectApiClient():
 
 
     def find_contacts_by_advisor(self, externalNetwork, advisorEmailAddress):
-        if externalNetwork == 'WECHAT':
-            url = f'/api/v1/customer/advisors/advisorEmailAddress/{urllib.parse.quote_plus(advisorEmailAddress)}/externalNetwork/{externalNetwork}/contacts'
-        elif externalNetwork == 'WHATSAPP':
-            url = f'/api/v1/customer/advisors/emailAddress/{urllib.parse.quote_plus(advisorEmailAddress)}/externalNetwork/{externalNetwork}/contacts'
+        url = f'/api/v1/customer/advisors/advisorEmailAddress/{urllib.parse.quote_plus(advisorEmailAddress)}/externalNetwork/{externalNetwork}/contacts'
 
         status, result = self.execute_rest_call(externalNetwork, "GET", url)
 
@@ -59,10 +56,7 @@ class ConnectApiClient():
 
 
     def find_advisors_by_contact(self, externalNetwork, contactEmail):
-        if externalNetwork == 'WECHAT':
-            url = f'/api/v1/customer/contacts/contactEmailAddress/{urllib.parse.quote_plus(contactEmail)}/externalNetwork/{externalNetwork}/advisors'
-        elif externalNetwork == 'WHATSAPP':
-            url = f'/api/v1/customer/contacts/emailAddress/{urllib.parse.quote_plus(contactEmail)}/externalNetwork/{externalNetwork}/advisors'
+        url = f'/api/v1/customer/contacts/contactEmailAddress/{urllib.parse.quote_plus(contactEmail)}/externalNetwork/{externalNetwork}/advisors'
 
         status, result = self.execute_rest_call(externalNetwork, "GET", url)
 
