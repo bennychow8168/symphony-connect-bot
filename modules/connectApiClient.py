@@ -14,6 +14,13 @@ class ConnectApiClient():
         self.podId = config.data['podId']
         self.jwt = None
 
+    def list_permission(self, externalNetwork):
+        url = f'/api/v1/customer/permissions'
+        status, result = self.execute_rest_call(externalNetwork, "GET", url)
+
+        return status, result
+
+
     def find_advisor(self, externalNetwork, advisorEmail):
         url = f'/api/v2/customer/advisor/entitlements?advisorEmailAddress={urllib.parse.quote_plus(advisorEmail)}&externalNetwork={externalNetwork}'
         status, result = self.execute_rest_call(externalNetwork, "GET", url)
@@ -24,9 +31,26 @@ class ConnectApiClient():
     def find_contact(self, externalNetwork, email):
         if externalNetwork == 'WECHAT':
             url = f'/api/v1/customer/contacts?contactEmailAddress={urllib.parse.quote_plus(email)}&externalNetwork={externalNetwork}'
-        elif externalNetwork == 'WHATSAPP':
+        else:
             url = f'/api/v1/customer/contacts?emailAddress={urllib.parse.quote_plus(email)}&externalNetwork={externalNetwork}'
         status, result = self.execute_rest_call(externalNetwork, "GET", url)
+
+        return status, result
+
+
+    def update_contact(self, externalNetwork, email, firstName, lastName, companyName, phoneNumber, advisorEmailAddress):
+        url = f'/api/v1/customer/contacts/{urllib.parse.quote_plus(email)}/update'
+
+        body = {
+            "firstName": firstName,
+            "lastName": lastName,
+            "companyName": companyName,
+            "phoneNumber": phoneNumber,
+            "externalNetwork": externalNetwork,
+            "advisorEmailAddress": advisorEmailAddress,
+            }
+
+        status, result = self.execute_rest_call(externalNetwork, "POST", url, json=body)
 
         return status, result
 
@@ -217,7 +241,7 @@ class ConnectApiClient():
         results = None
         if externalNetwork == "WECHAT":
             apiURL = self.config.data['wechat_apiURL']
-        elif externalNetwork == "WHATSAPP":
+        else:
             apiURL = self.config.data['whatsapp_apiURL']
 
         url = apiURL + path
@@ -263,18 +287,19 @@ class ConnectApiClient():
             current_date = int(datetime.datetime.now(datetime.timezone.utc).timestamp())
             expiration_date = current_date + (5*58)
 
-            if externalNetwork == 'WHATSAPP':
+            if externalNetwork == 'WECHAT':
+                payload = {
+                    'sub': 'ces:customer:' + self.config.data['wechat_publicKeyId'],
+                    'exp': expiration_date,
+                    'iat': current_date
+                }
+            else:
                 payload = {
                     'sub': 'ces:customer:' + self.config.data['whatsapp_publicKeyId'],
                     'exp': expiration_date,
                     'iat': current_date
                 }
-            elif externalNetwork == 'WECHAT':
-                payload = {
-                    'sub': 'ces:customer:' + self.config.data['wechat_publicKeyId'] + ':' + self.config.data['podId'],
-                    'exp': expiration_date,
-                    'iat': current_date
-                }
+
 
             encoded = jwt.encode(payload, private_key, algorithm='RS512')
             f.close()

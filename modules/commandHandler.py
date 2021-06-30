@@ -16,8 +16,8 @@ class CommandHandler:
             if len(msg_text) >= 4:
                 externalNetwork = msg_text[2].upper().rstrip()
 
-                if externalNetwork not in ("WECHAT", "WHATSAPP"):
-                    msg_to_send = dict(message=f'''<messageML>ERROR: Invalid Connect Network provided. Expect "WECHAT" or "WHATSAPP" only</messageML>''')
+                if externalNetwork not in ("WECHAT", "WHATSAPP", "SMS"):
+                    msg_to_send = dict(message=f'''<messageML>ERROR: Invalid Connect Network provided. Expect "WECHAT" or "WHATSAPP" or "SMS" only</messageML>''')
                     self.bot_client.get_message_client().send_msg(stream_id, msg_to_send)
                     return
 
@@ -72,8 +72,8 @@ class CommandHandler:
             if len(msg_text) >= 3:
                 externalNetwork = msg_text[2].upper().rstrip()
 
-                if externalNetwork not in ("WECHAT", "WHATSAPP"):
-                    msg_to_send = dict(message=f'''<messageML>ERROR: Invalid Connect Network provided. Expect "WECHAT" or "WHATSAPP" only</messageML>''')
+                if externalNetwork not in ("WECHAT", "WHATSAPP", "SMS"):
+                    msg_to_send = dict(message=f'''<messageML>ERROR: Invalid Connect Network provided. Expect "WECHAT" or "WHATSAPP" or "SMS" only</messageML>''')
                     self.bot_client.get_message_client().send_msg(stream_id, msg_to_send)
                     return
 
@@ -94,8 +94,8 @@ class CommandHandler:
             if len(msg_text) >= 4:
                 externalNetwork = msg_text[2].upper().rstrip()
 
-                if externalNetwork not in ("WECHAT", "WHATSAPP"):
-                    msg_to_send = dict(message=f'''<messageML>ERROR: Invalid Connect Network provided. Expect "WECHAT" or "WHATSAPP" only</messageML>''')
+                if externalNetwork not in ("WECHAT", "WHATSAPP", "SMS"):
+                    msg_to_send = dict(message=f'''<messageML>ERROR: Invalid Connect Network provided. Expect "WECHAT" or "WHATSAPP" or "SMS" only</messageML>''')
                     self.bot_client.get_message_client().send_msg(stream_id, msg_to_send)
                     return
 
@@ -242,6 +242,7 @@ class CommandHandler:
                     <select name="externalNetwork" required="true">
                         <option value="WECHAT" selected="true">WeChat</option>
                         <option value="WHATSAPP">WhatsApp</option>
+                        <option value="SMS">SMS</option>
                     </select>
                     <h5>Contact First Name:</h5>
                     <text-field name="firstName" required="true"/>
@@ -278,9 +279,9 @@ class CommandHandler:
                               </tr>
                               <tr>
                                 <td><b>/connect</b></td>
-                                <td><b>Add New Contact</b><br/>@ConnectBot /connect [WECHAT|WHATSAPP] [FirstName;LastName;EmailAddress;MobileNumber;CompanyName]<br/><br/>
-                                <b>Add Contact to Room</b><br/>@ConnectBot /connect [WECHAT|WHATSAPP] [FirstName;LastName;EmailAddress;MobileNumber;CompanyName;RoomName]<br/><br/></td>
-                                <td>Allows you to connect with a new user on WeChat / WhatsApp. You may also optionally provide a room name to add new user to an existing room or new room.<br/><br/>
+                                <td><b>Add New Contact</b><br/>@ConnectBot /connect [WECHAT|WHATSAPP|SMS] [FirstName;LastName;EmailAddress;MobileNumber;CompanyName]<br/><br/>
+                                <b>Add Contact to Room</b><br/>@ConnectBot /connect [WECHAT|WHATSAPP|SMS] [FirstName;LastName;EmailAddress;MobileNumber;CompanyName;RoomName]<br/><br/></td>
+                                <td>Allows you to connect with a new user on WeChat / WhatsApp / SMS. You may also optionally provide a room name to add new user to an existing room or new room.<br/><br/>
                                 <b>Example</b><br/>@ConnectBot /connect WECHAT John;Doe;john.doe@xyz.com;+18726582942;XYZ Corp<br/>@ConnectBot /connect WECHAT John;Doe;john.doe@xyz.com;+18726582942;XYZ Corp;XYZ Room</td>
                               </tr>
                               <tr>
@@ -290,12 +291,12 @@ class CommandHandler:
                               </tr>
                               <tr>
                                 <td><b>/listcontacts</b></td>
-                                <td><b>List all contacts</b><br/>@ConnectBot /listcontacts [WECHAT|WHATSAPP]</td>
+                                <td><b>List all contacts</b><br/>@ConnectBot /listcontacts [WECHAT|WHATSAPP|SMS]</td>
                                 <td>List all contacts for current user by Connect network</td>
                               </tr>
                               <tr>
                                 <td><b>/deletecontact</b></td>
-                                <td><b>Delete a contact</b><br/>@ConnectBot /deletecontact [WECHAT|WHATSAPP] [ContactEmailAddress]</td>
+                                <td><b>Delete a contact</b><br/>@ConnectBot /deletecontact [WECHAT|WHATSAPP|SMS] [ContactEmailAddress]</td>
                                 <td>Delete a contact for current user by Connect network</td>
                               </tr>
                               <tr>
